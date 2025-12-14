@@ -17,12 +17,12 @@ resource "null_resource" "k3s_cluster" {
   }
 
   # 2. Déprovisionnement (Destruction du cluster)
-  provisioner "local-exec" {
-    when = destroy
+  #provisioner "local-exec" {
+  #  when = destroy
     # Suppression du cluster K3d.
-    command = "k3d cluster delete ${self.triggers.name} || true"
-    interpreter = ["/bin/bash", "-c"]
-  }
+  #  command = "k3d cluster delete ${self.triggers.name} || true"
+  #  interpreter = ["/bin/bash", "-c"]
+  #}
 }
 
 
