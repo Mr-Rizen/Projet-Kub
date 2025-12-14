@@ -4,55 +4,54 @@
 
 # Ressource null_resource pour la création et destruction du cluster K3s
 resource "null_resource" "k3s_cluster" {
-  triggers = {
-    # Force le re-provisionnement si le nom du cluster change
-    name = var.cluster_name
-  }
+  triggers = {
+    # Force le re-provisionnement si le nom du cluster change
+    name = var.cluster_name
+  }
 
-  # 1. Provisionnement (Création du cluster K3d et installation du Dashboard Helm)
-  provisioner "local-exec" {
-    # Exécution du script shell de création du cluster.
-    command = "chmod +x create_k3s_cluster.sh && ./create_k3s_cluster.sh ${self.triggers.name}"
-    interpreter = ["/bin/bash", "-c"]
-  }
+  # 1. Provisionnement (Création du cluster K3d et installation du Dashboard Helm)
+  provisioner "local-exec" {
+    # Exécution du script shell de création du cluster.
+    command = "chmod +x create_k3s_cluster.sh && ./create_k3s_cluster.sh ${self.triggers.name}"
+    interpreter = ["/bin/bash", "-c"]
+  }
 
-  # 2. Déprovisionnement (Destruction du cluster)
-  provisioner "local-exec" {
-    when = destroy
-    # Suppression du cluster K3d.
-    command = "k3d cluster delete ${self.triggers.name} || true"
-    interpreter = ["/bin/bash", "-c"]
-  }
+  # 2. Déprovisionnement (Destruction du cluster)
+  provisioner "local-exec" {
+    when = destroy
+    # Suppression du cluster K3d.
+    command = "k3d cluster delete ${self.triggers.name} || true"
+    interpreter = ["/bin/bash", "-c"]
+  }
 }
 
 
 # Ressource pour l'importation de l'image Docker dans le cluster K3d
 resource "null_resource" "k3d_image_import" {
-  depends_on = [null_resource.k3s_cluster]
+  depends_on = [null_resource.k3s_cluster]
 
-  triggers = {
-    image_tag = var.app_image_tag
-    cluster_name = var.cluster_name
-  }
+  triggers = {
+    image_tag = var.app_image_tag
+    cluster_name = var.cluster_name
+  }
 
-  provisioner "local-exec" {
-    command = "k3d image import ${self.triggers.image_tag} -c ${self.triggers.cluster_name}"
-    interpreter = ["/bin/bash", "-c"]
-  }
+  provisioner "local-exec" {
+    command = "k3d image import ${self.triggers.image_tag} -c ${self.triggers.cluster_name}"
+    interpreter = ["/bin/bash", "-c"]
+  }
 }
 
 
-# 🌟 NOUVEAU BLOC POUR LE DÉPLOIEMENT RÉEL 🌟
+# Ressource pour le déploiement de l'application Kubernetes (MAJ pour déploiement réel)
 resource "null_resource" "k8s_app_deployment" {
-  depends_on = [null_resource.k3d_image_import]
-  
-  triggers = {
-    image_tag = var.app_image_tag
-    # Ajouter le nom du cluster ici facilite l'affichage dans le log
+  depends_on = [null_resource.k3d_image_import]
+  
+  triggers = {
+    image_tag = var.app_image_tag
     cluster_name = null_resource.k3s_cluster.triggers.name 
-  }
-  
-  provisioner "local-exec" {
+  }
+  
+  provisioner "local-exec" {
     # Définir le répertoire de travail pour accéder aux fichiers YAML
     working_dir = "${path.module}/../../app/kubernetes"
 
@@ -71,6 +70,6 @@ resource "null_resource" "k8s_app_deployment" {
       # 3. Nettoyage du fichier temporaire
       rm deployment-temp.yaml
     EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
+    interpreter = ["/bin/bash", "-c"]
+  }
 }
