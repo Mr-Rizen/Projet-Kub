@@ -1,13 +1,4 @@
-# main.tf - Modifié pour utiliser la variable Jenkins et le port 5000 de l'app
-
-terraform {
-  required_providers {
-    null = { source = "hashicorp/null" }
-    kubernetes = { source = "hashicorp/kubernetes" }
-  }
-}
-
-provider "kubernetes" {}
+# main.tf - Fichier de déclaration des ressources
 
 # --- PROVISIONNEMENT K3S (Identique au template précédent) ---
 resource "null_resource" "k3s_cluster" {
@@ -62,7 +53,7 @@ resource "kubernetes_service" "app_service" {
   spec {
     selector = { App = var.app_label }
     port {
-      port        = 80
+      port      = 80
       target_port = 5000 # Le Service envoie le trafic au port 5000 du Pod Flask
     }
     type = "LoadBalancer" 
