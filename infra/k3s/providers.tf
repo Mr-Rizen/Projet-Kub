@@ -1,23 +1,25 @@
-# Déclare les providers nécessaires et leurs sources/versions
+# infra/k3s/providers.tf
+
+# 1. Déclaration des providers requis
 terraform {
   required_providers {
-    null = {
-      source = "hashicorp/null"
-      version = "~> 3.0"
-    }
     kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = "~> 2.20"
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
     }
   }
 }
 
-# Configuration du provider Kubernetes
-# Il va automatiquement utiliser le kubeconfig généré par 'k3d kubeconfig write'
+# 2. Configuration du fournisseur Kubernetes
+# C'est la partie cruciale qui résout l'erreur "connection refused".
+# Elle pointe vers le fichier généré par 'k3d kubeconfig write ${var.cluster_name}'.
 provider "kubernetes" {
-  # Pour un usage local avec k3d, laisser les champs vides est la meilleure pratique,
-  # car Terraform cherche les fichiers de configuration par défaut.
+  config_path = "/root/.config/k3d/kubeconfig-${var.cluster_name}.yaml"
 }
 
-# Configuration du provider 'null'
+# 3. Configuration des autres providers (facultatif mais bonne pratique)
 provider "null" {}
