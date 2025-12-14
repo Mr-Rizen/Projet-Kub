@@ -1,20 +1,14 @@
-# infra/k3s/variables.tf
+# infra/k3s/variables.tf (Recommandé)
 
+# Variables pour le cluster
 variable "cluster_name" {
-  description = "Nom du cluster k3d."
+  description = "Nom du cluster k3s à créer"
   type        = string
-  default     = "tf-devops-lab"
+  default     = "k3d-dev-cluster"
 }
 
-variable "app_label" {
-  description = "Label utilisé pour identifier les composants de l'application Flask."
-  type        = string
-  default     = "flask-web"
-}
-
+# Variable pour le tag de l'image de l'application
 variable "app_image_tag" {
-  description = "Tag complet de l'image Docker de l'application à déployer (e.g., kikih/devops-webapp:4)."
+  description = "Le tag de l'image Docker de l'application à déployer"
   type        = string
-  # NOTE IMPORTANTE : Cette variable N'A PAS de 'default'. 
-  # Elle DOIT être fournie via '-var' lors de l'exécution de 'terraform apply' ou 'destroy'.
 }

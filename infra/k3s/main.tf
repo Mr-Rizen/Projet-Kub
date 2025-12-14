@@ -1,23 +1,6 @@
-# infra/k3s/main.tf
-# Configuration de base pour un cluster k3d
-terraform {
-  required_providers {
-    null = {
-      source = "hashicorp/null"
-      version = "~> 3.0"
-    }
-  }
-}
+# infra/k3s/main.tf (Corrigé)
 
-# Variables (si vous en avez)
-variable "cluster_name" {
-  description = "Nom du cluster k3s à créer"
-  type        = string
-  default     = "k3d-dev-cluster"
-}
-
-# La ressource null_resource permet d'exécuter des commandes locales.
-# Elle est utilisée ici pour exécuter le script de provisionnement K3s.
+# Ressource null_resource pour la création et destruction du cluster K3s
 resource "null_resource" "k3s_cluster" {
   triggers = {
     # Changer le nom du cluster force le re-provisionnement
@@ -26,11 +9,8 @@ resource "null_resource" "k3s_cluster" {
 
   # Provisionnement (Création du cluster)
   provisioner "local-exec" {
-    # Utiliser un script shell externe pour la clarté et la gestion des commandes complexes.
-    # Exécution du script et passage du nom du cluster comme argument.
+    # Exécution du script shell de création du cluster avec le nom du cluster en argument.
     command = "chmod +x create_k3s_cluster.sh && ./create_k3s_cluster.sh ${self.triggers.name}"
-    
-    # Correction pour les environnements Windows/Git: on filtre les retours chariots (\r)
     interpreter = ["/bin/bash", "-c"]
   }
 
@@ -43,21 +23,15 @@ resource "null_resource" "k3s_cluster" {
   }
 }
 
-# Resource pour le déploiement de l'application (doit probablement être dans un autre fichier ou module,
-# mais je la conserve ici pour l'exemple de la variable d'image).
-variable "app_image_tag" {
-  description = "Le tag de l'image Docker de l'application à déployer"
-  type        = string
-}
-
+# Ressource pour le déploiement de l'application
 resource "null_resource" "k8s_app_deployment" {
   triggers = {
     image_tag = var.app_image_tag
   }
   
-  # Exemple d'application (à adapter)
+  # TODO: Remplacer ceci par le vrai déploiement K8s (kubectl apply ou helm install)
   provisioner "local-exec" {
-    # Ceci est juste un exemple. Il faudrait utiliser des manifestes Kubernetes (kubectl apply ou helm install) ici.
-    command = "echo 'Simuler le déploiement de l'image ${self.triggers.image_tag} sur le cluster ${null_resource.k3s_cluster.triggers.name}'"
+    command = "echo 'Simuler le déploiement de l\'image ${self.triggers.image_tag} sur le cluster ${null_resource.k3s_cluster.triggers.name}'"
+    interpreter = ["/bin/bash", "-c"]
   }
 }
