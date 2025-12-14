@@ -4,7 +4,9 @@
 # Arrête le script immédiatement si une commande échoue
 set -e
 
-# ... (Vérifications des dépendances - Lignes 8 à 15 inchangées) ...
+# Vérification des dépendances (meilleure pratique)
+command -v k3d || { echo "k3d non trouvé. Assurez-vous qu'il est installé."; exit 1; }
+command -v helm || { echo "helm non trouvé. Assurez-vous qu'il est installé."; exit 1; }
 
 # Récupération de l'argument (nom du cluster)
 CLUSTER_NAME=$1
@@ -18,19 +20,16 @@ echo "--- 1. Nettoyage du cluster précédent (si existant) : $CLUSTER_NAME ---"
 k3d cluster delete "$CLUSTER_NAME" || true
 
 echo "--- 2. Création du cluster K3d : $CLUSTER_NAME ---"
-# Création du cluster K3d avec 3 serveurs et les ports exposés
+# Création du cluster K3d avec 1 serveur et SEULEMENT le port du Dashboard exposé
 k3d cluster create "$CLUSTER_NAME" \
-  --servers 3 \
+  --servers 1 \
   --image rancher/k3s:v1.31.5-k3s1 \
-  -p 8081:30080@server:0 \
   -p 8082:30082@server:0 \
   --wait
-# REMARQUE :
-# 1. 8081 (hôte) redirige vers 30080 (cluster) -> Pour votre application.
-# 2. 8082 (hôte) redirige vers 30082 (cluster) -> Pour le Dashboard.
+# NOTE: 8082 (hôte) est redirigé vers 30082 (NodePort du Dashboard).
 
 echo "--- 3. Ajout du dépôt Helm pour le Dashboard ---"
-helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
 
 echo "--- 4. Installation du Dashboard Kubernetes via Helm ---"
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
@@ -40,6 +39,33 @@ helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dash
   --set service.type=NodePort \
   --set service.nodePort=30082 \
   --wait
-# NOTE : Le NodePort du Dashboard est maintenant 30082, ce qui correspond à la redirection ci-dessus.
 
-echo "✅ Provisionnement K3s terminé avec succès."
+echo "--- 5. Configuration de l'accès au Dashboard (Token) ---"
+# Création d'un ServiceAccount et d'un ClusterRoleBinding pour l'accès complet
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+EOF
+
+echo "✅ Provisionnement K3s + Dashboard terminé avec succès."
+echo "--------------------------------------------------------"
+echo "URL du Dashboard : http://localhost:8082/"
+echo "Token pour se connecter : (attendez quelques secondes pour l'apparition)"
+kubectl -n kubernetes-dashboard create token admin-user
+echo "--------------------------------------------------------"
