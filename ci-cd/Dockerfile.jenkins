@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # 1B. Installation du Docker CLI (Client en ligne de commande)
-# Ceci est nécessaire pour que la commande 'docker' existe dans le conteneur Jenkins
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && apt-get install -y docker-ce-cli
@@ -27,10 +26,15 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
 RUN wget -q -O /usr/local/bin/k3d https://github.com/k3d-io/k3d/releases/download/v5.8.3/k3d-linux-amd64 && \
     chmod +x /usr/local/bin/k3d
 
-# 5. Installation d'Ansible (Forcé)
+# 5. Installation d'Ansible
 RUN pip3 install ansible --break-system-packages
 
-# 6. Mettre à jour PATH pour tous les utilisateurs si nécessaire (même si /usr/local/bin est souvent déjà inclus)
+# 6. Ajouter l'utilisateur Jenkins au groupe Docker pour accéder au socket monté
+# Ceci résout l'erreur de "permission denied"
+RUN groupadd -g 999 docker || true
+RUN usermod -aG docker jenkins
+
+# 7. Mettre à jour PATH pour tous les utilisateurs si nécessaire
 ENV PATH="/usr/local/bin:$PATH"
 
 USER jenkins
