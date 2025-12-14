@@ -37,9 +37,6 @@ pipeline {
                     if ! command -v helm &> /dev/null
                     then
                         echo "Helm non détecté, installation en cours via curl..."
-                        # Télécharge et exécute le script officiel d'installation de Helm.
-                        # Doit être exécuté avant d'entrer dans le dir Terraform, car le script 
-                        # create_k3s_cluster.sh en a besoin pour installer le dashboard.
                         curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
                         echo "Helm installé."
                     else
@@ -53,17 +50,20 @@ pipeline {
                     
                     echo "Création du cluster K3s/K3d via Terraform..."
                     // On cible explicitement la création du cluster.
-                    // La variable image est passée mais n'est pas encore utilisée par cette ressource.
+                    // On laisse la variable image pour la cohérence, même si main.tf est simplifié.
                     sh "terraform apply -target=null_resource.k3s_cluster -var=app_image_tag=${IMAGE_TAG} -auto-approve"
                 }
             }
         }
         
+        // Les stages 3 et 4 sont conservés, mais terraform apply n'aura plus rien à faire 
+        // car leurs ressources ont été retirées du main.tf, ce qui est l'état souhaité.
+
         stage('3. Import Image to K3d (Local Fix)') {
             steps {
                 dir(TERRAFORM_DIR) {
                     echo "Importation de l'image Docker dans le cluster K3d..."
-                    // On cible l'importation de l'image locale.
+                    // Cette étape ne fera rien si la ressource est retirée du main.tf
                     sh "terraform apply -target=null_resource.k3d_image_import -var=app_image_tag=${IMAGE_TAG} -auto-approve"
                 }
             }
@@ -73,7 +73,7 @@ pipeline {
             steps {
                 dir(TERRAFORM_DIR) {
                     echo "Déploiement de l'application K8s via Terraform..."
-                    // On cible le déploiement de l'application.
+                    // Cette étape ne fera rien si la ressource est retirée du main.tf
                     sh "terraform apply -target=null_resource.k8s_app_deployment -var=app_image_tag=${IMAGE_TAG} -auto-approve"
                 }
             }
@@ -84,13 +84,14 @@ pipeline {
         always {
             echo "Démarrage du nettoyage de l'infrastructure..."
             dir("${TERRAFORM_DIR}") {
-                // Détruire le cluster. Nous utilisons le tag réel pour la cohérence, même si le destroy l'ignore.
-                sh "terraform destroy -var=app_image_tag=${IMAGE_TAG} -auto-approve"
+                // *** COMMANDE DE DESTRUCTION NEUTRALISÉE POUR GARDER LE CLUSTER UP ***
+                // sh "terraform destroy -var=app_image_tag=${IMAGE_TAG} -auto-approve" 
+                echo "NOTE : Le cluster K3s/K3d est conservé (destroy désactivé dans Jenkinsfile)."
             }
             echo "Nettoyage terminé."
         }
         success {
-            echo "✅ Pipeline RÉUSSI. L'application est déployée."
+            echo "✅ Pipeline RÉUSSI. Le cluster K3s est MAINTENU."
         }
         failure {
             echo "❌ Pipeline ÉCHOUÉ. Vérifiez les logs."

@@ -4,7 +4,7 @@
 # Arrête le script immédiatement si une commande échoue
 set -e
 
-# Vérification des dépendances (meilleure pratique)
+# Vérification des dépendances
 command -v k3d || { echo "k3d non trouvé. Assurez-vous qu'il est installé."; exit 1; }
 command -v helm || { echo "helm non trouvé. Assurez-vous qu'il est installé."; exit 1; }
 
@@ -26,7 +26,7 @@ k3d cluster create "$CLUSTER_NAME" \
   --image rancher/k3s:v1.31.5-k3s1 \
   -p 8082:30082@server:0 \
   --wait
-# NOTE: 8082 (hôte) est redirigé vers 30082 (NodePort du Dashboard).
+# NOTE: 8082 (hôte) est mappé au NodePort 30082 interne.
 
 echo "--- 3. Ajout du dépôt Helm pour le Dashboard ---"
 helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update

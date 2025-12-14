@@ -1,5 +1,7 @@
 # infra/k3s/main.tf
 
+# Cette configuration se concentre uniquement sur la création du cluster K3s et l'installation du Dashboard.
+
 # Ressource null_resource pour la création du cluster K3s (avec Dashboard)
 resource "null_resource" "k3s_cluster" {
   triggers = {
@@ -14,13 +16,6 @@ resource "null_resource" "k3s_cluster" {
     interpreter = ["/bin/bash", "-c"]
   }
 
-  # NOTE : L'étape de destruction est commentée. Le cluster restera après le pipeline.
-  # provisioner "local-exec" {
-  #   when = destroy
-  #   command = "k3d cluster delete ${self.triggers.name} || true"
-  #   interpreter = ["/bin/bash", "-c"]
-  # }
+  # NOTE IMPORTANTE : Le provisioner "local-exec" avec when = destroy est intentionnellement retiré.
+  # Le cluster K3d sera conservé après l'exécution de 'terraform destroy' ou la fin du pipeline.
 }
-
-# Les ressources k3d_image_import et k8s_app_deployment ont été retirées 
-# conformément à l'objectif de n'avoir que le Dashboard fonctionnel.
