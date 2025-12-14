@@ -5,7 +5,6 @@ def DOCKER_IMAGE_TAG = "${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}" // Utilise le 
 pipeline {
     agent any
     environment {
-        # Variable d'environnement pour l'image Docker finale
         IMAGE_TAG = DOCKER_IMAGE_TAG
     }
 
