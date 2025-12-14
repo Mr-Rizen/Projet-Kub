@@ -8,15 +8,15 @@ output "cluster_status" {
 
 output "application_url" {
   description = "URL pour accéder à l'application Flask."
-  # L'URL utilise le port 8081, qui est mappé vers le NodePort 30080
+  # Application sur Hôte:8081 -> K8s:30080
   value = "http://localhost:8081"
   depends_on = [kubernetes_service.app_service]
 }
 
 output "dashboard_url" {
   description = "URL pour accéder au Dashboard Kubernetes (attention, nécessite le token d'accès)."
-  # Le Dashboard utilise le port 8080, qui est mappé vers le NodePort 30081
-  value = "http://localhost:8080"
+  # Dashboard sur Hôte:8082 -> K8s:30081 (Évite le conflit avec Jenkins)
+  value = "http://localhost:8082"
   depends_on = [null_resource.k3s_cluster]
 }
 

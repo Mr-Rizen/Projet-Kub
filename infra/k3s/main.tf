@@ -1,26 +1,27 @@
 # infra/k3s/main.tf
 
 # ----------------------------------------------------------------------
-# 1. PROVISIONNEMENT K3S (Résilience et NodePorts)
+# 1. PROVISIONNEMENT K3S (Résilience et NodePorts fixes)
 # ----------------------------------------------------------------------
 resource "null_resource" "k3s_cluster" {
   triggers = {
     name = var.cluster_name
   }
   provisioner "local-exec" {
-    # Crée un cluster K3d avec 3 serveurs pour la résilience.
-    # Mappage des NodePorts :
-    # - Port Hôte 8081 -> NodePort 30080 (pour l'application Flask)
-    # - Port Hôte 8080 -> NodePort 30081 (pour le Dashboard K8s)
     command = <<EOT
+      # Création du cluster K3d avec 3 serveurs pour la résilience.
+      # Mappage des NodePorts sur l'hôte (Hôte:NodePort K8s@Server) :
+      # - Port Hôte 8081 -> NodePort 30080 (pour l'application Flask)
+      # - Port Hôte 8082 -> NodePort 30081 (pour le Dashboard K8s, évite le conflit 8080 avec Jenkins)
       k3d cluster create ${self.triggers.name} \
       --servers 3 \
       --image rancher/k3s:v1.31.5-k3s1 \
       -p 8081:30080@server:0 \
-      -p 8080:30081@server:0 \
+      -p 8082:30081@server:0 \
       --wait
 
-      # Installation du Dashboard Kubernetes via Helm, ciblant le NodePort 30081
+      # Installation du Dashboard Kubernetes via Helm.
+      # Utilise NodePort 30081, mappé vers le port 8082 de l'hôte.
       helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
       --repo https://kubernetes.github.io/dashboard/ \
       --namespace kubernetes-dashboard \
@@ -60,7 +61,7 @@ resource "kubernetes_deployment" "custom_app" {
     }
   }
   spec {
-    replicas = 3 # Résilience: 3 instances de l'application
+    replicas = 3 
     selector {
       match_labels = {
         App = var.app_label
@@ -95,8 +96,8 @@ resource "kubernetes_service" "app_service" {
     selector = {
       App = var.app_label
     }
-    # Utilisation de NodePort pour fonctionner correctement avec le mapping de port de K3d
-    type = "NodePort" # FIX CRITIQUE: Évite le timeout LoadBalancer
+    # Utilisation de NodePort pour corriger le problème de LoadBalancer
+    type = "NodePort" 
     port {
       port        = 80
       target_port = "5000"
