@@ -1,0 +1,4 @@
+# deployment.yaml (À titre informatif)
+# apiVersion: apps/v1
+# kind: Deployment
+# ...

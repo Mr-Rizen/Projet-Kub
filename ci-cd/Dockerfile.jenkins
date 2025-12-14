@@ -1,0 +1,30 @@
+FROM jenkins/jenkins:lts
+
+USER root
+
+# 1. Installer les dépendances essentielles et les outils de développement
+RUN apt-get update && apt-get install -y \
+    wget unzip curl gnupg python3 python3-pip git && \
+    rm -rf /var/lib/apt/lists/*
+
+# 2. Installation de Terraform
+RUN wget https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip && \
+    unzip terraform_1.7.0_linux_amd64.zip -d /usr/local/bin/ && \
+    rm terraform_1.7.0_linux_amd64.zip
+
+# 3. Installation de kubectl (Client Kubernetes)
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# 4. Installation de k3d
+RUN wget -q -O /usr/local/bin/k3d https://github.com/k3d-io/k3d/releases/download/v5.8.3/k3d-linux-amd64 && \
+    chmod +x /usr/local/bin/k3d
+
+# 5. Installation d'Ansible (Forcé)
+RUN pip3 install ansible --break-system-packages
+
+# 6. Mettre à jour PATH pour tous les utilisateurs si nécessaire (même si /usr/local/bin est souvent déjà inclus)
+ENV PATH="/usr/local/bin:$PATH"
+
+USER jenkins

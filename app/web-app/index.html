@@ -1,0 +1,16 @@
+# Fichier index.html (qui est en réalité un simple script Flask)
+
+from flask import Flask
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    # Afficher le nom du Pod pour prouver le Load Balancing
+    hostname = os.uname()[1] 
+    return f"<h1>Hello DevOps World!</h1><h2>Served by Pod: {hostname}</h2>"
+
+if __name__ == "__main__":
+    # Exécuter sur le port 5000 (exposé dans le Dockerfile)
+    app.run(host='0.0.0.0', port=5000)

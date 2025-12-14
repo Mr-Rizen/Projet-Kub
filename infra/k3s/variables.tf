@@ -1,6 +1,17 @@
-# 3. Configuration du Provider Kubernetes
-# Il va automatiquement chercher le kubeconfig dans les chemins par défaut
-provider "kubernetes" {
-  # Pour K3d, l'authentification est gérée par le fichier kubeconfig créé en 1.4
-  # Terraform utilise ce fichier pour s'authentifier auprès du cluster K3s.
+variable "cluster_name" {
+  default = "tf-devops-lab"
+}
+
+variable "app_replicas" {
+  default = 3
+}
+
+variable "app_label" {
+  default = "flask-web"
+}
+
+# Nouvelle variable pour l'image construite par Jenkins
+variable "app_image_tag" {
+  description = "Le tag de l'image Docker construit par Jenkins (ex: kikih/devops-webapp:1)"
+  type        = string
 }

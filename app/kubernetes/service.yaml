@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-loadbalancer-service
+  labels:
+    App: flask-web
+spec:
+  # Doit correspondre au Label utilisé dans le Déploiement
+  selector:
+    App: flask-web 
+  type: LoadBalancer # Permet à K3s d'exposer ce service
+  ports:
+    - protocol: TCP
+      port: 80         # Le port que le service écoute
+      targetPort: 5000 # Le port de l'application Flask dans le Pod

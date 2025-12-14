@@ -1,0 +1,9 @@
+---
+# Ce Playbook est un exemple simple pour tester qu'Ansible fonctionne
+- name: Test de Connexion et Info
+  hosts: k3s_cluster
+  gather_facts: yes
+  tasks:
+    - name: Afficher le nom d'hôte
+      debug:
+        msg: "Connexion réussie à {{ ansible_hostname }}"
