@@ -8,28 +8,16 @@ resource "null_resource" "k3s_cluster" {
     name = var.cluster_name
   }
   provisioner "local-exec" {
-    command = <<EOT
-      # Création du cluster K3d avec 3 serveurs pour la résilience.
-      # Mappage des NodePorts sur l'hôte (Hôte:NodePort K8s@Server) :
-      # - Port Hôte 8081 -> NodePort 30080 (pour l'application Flask)
-      # - Port Hôte 8082 -> NodePort 30081 (pour le Dashboard K8s, évite le conflit 8080 avec Jenkins)
-      k3d cluster create ${self.triggers.name} \
-      --servers 3 \
-      --image rancher/k3s:v1.31.5-k3s1 \
-      -p 8081:30080@server:0 \
-      -p 8082:30081@server:0 \
-      --wait
+    command = <<-EOT
+      # S'assurer que les commandes sont sur une seule ligne pour éviter les erreurs de parsing shell.
+      # L'ajout de '|| true' permet à la suppression de ne pas faire échouer le script si le cluster n'existe pas.
+      k3d cluster delete ${self.triggers.name} || true
 
-      # Installation du Dashboard Kubernetes via Helm.
-      # Utilise NodePort 30081, mappé vers le port 8082 de l'hôte.
-      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
-      --repo https://kubernetes.github.io/dashboard/ \
-      --namespace kubernetes-dashboard \
-      --create-namespace \
-      --set protocolHttp=true \
-      --set service.type=NodePort \
-      --set service.nodePort=30081 \
-      --wait
+      # COMMANDE K3D CORRIGÉE (sur une seule ligne)
+      k3d cluster create ${self.triggers.name} --servers 3 --image rancher/k3s:v1.31.5-k3s1 -p 8081:30080@server:0 -p 8082:30081@server:0 --wait
+
+      # COMMANDE HELM CORRIGÉE (sur une seule ligne)
+      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --repo https://kubernetes.github.io/dashboard/ --namespace kubernetes-dashboard --create-namespace --set protocolHttp=true --set service.type=NodePort --set service.nodePort=30081 --wait
     EOT
   }
 
@@ -101,7 +89,7 @@ resource "kubernetes_service" "app_service" {
     port {
       port        = 80
       target_port = "5000"
-      node_port   = 30080 # Le port externe (NodePort) doit être 30080
+      node_port   = 30080 # Le port externe (NodePort) est 30080 (mappé à 8081 sur l'hôte)
       protocol    = "TCP"
     }
   }
