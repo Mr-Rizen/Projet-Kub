@@ -15,4 +15,6 @@ variable "app_label" {
 variable "app_image_tag" {
   description = "Tag complet de l'image Docker de l'application à déployer (e.g., kikih/devops-webapp:4)."
   type        = string
+  # NOTE IMPORTANTE : Cette variable N'A PAS de 'default'. 
+  # Elle DOIT être fournie via '-var' lors de l'exécution de 'terraform apply' ou 'destroy'.
 }
