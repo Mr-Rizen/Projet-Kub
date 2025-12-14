@@ -1,4 +1,4 @@
-# infra/k3s/providers.tf (Recommandé)
+# infra/k3s/providers.tf
 
 terraform {
   required_providers {

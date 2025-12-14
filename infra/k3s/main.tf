@@ -1,31 +1,13 @@
 # infra/k3s/main.tf
 
-# Configuration du provider 'null'
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
-    }
-  }
-}
-
-# Variable (inutile ici mais gardée pour la compatibilité avec Jenkinsfile)
-variable "app_image_tag" {
-  description = "Tag de l'image de l'application."
-  type        = string
-  default     = "kikih/devops-webapp:latest"
-}
-
-# Configuration du nom du cluster
-variable "cluster_name" {
-  description = "Nom du cluster K3d"
-  type        = string
-  default     = "k3d-dev-cluster"
-}
+# NOTE : La configuration des providers (terraform { required_providers... })
+# a été déplacée ou conservée dans providers.tf.
+# Les déclarations de variables ont été déplacées dans variables.tf.
 
 # Ressource pour la création du cluster K3s (avec Dashboard)
 resource "null_resource" "k3s_cluster" {
+  # Les variables "cluster_name" et "app_image_tag" sont maintenant définies
+  # et référencées depuis variables.tf.
   triggers = {
     name = var.cluster_name
   }

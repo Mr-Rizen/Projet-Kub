@@ -1,4 +1,4 @@
-# infra/k3s/variables.tf (Recommandé)
+# infra/k3s/variables.tf
 
 # Variables pour le cluster
 variable "cluster_name" {
@@ -11,4 +11,5 @@ variable "cluster_name" {
 variable "app_image_tag" {
   description = "Le tag de l'image Docker de l'application à déployer"
   type        = string
+  default     = "kikih/devops-webapp:latest"
 }
