@@ -8,16 +8,34 @@ resource "null_resource" "k3s_cluster" {
     name = var.cluster_name
   }
   provisioner "local-exec" {
-    command = <<-EOT
-      # S'assurer que les commandes sont sur une seule ligne pour éviter les erreurs de parsing shell.
-      # L'ajout de '|| true' permet à la suppression de ne pas faire échouer le script si le cluster n'existe pas.
+    # Nous utilisons 'tr -d "\r"' pour nettoyer les commandes de tout 
+    # caractère de retour chariot (\r) provenant d'éditeurs Windows.
+    # Ceci est la cause de l'erreur "unknown flag: --wait\r".
+    command = <<EOT | tr -d '\r'
+      # S'assurer que les outils sont disponibles (vérification rapide)
+      command -v k3d || { echo "k3d non trouvé. Assurez-vous qu'il est installé."; exit 1; }
+      command -v helm || { echo "helm non trouvé. Assurez-vous qu'il est installé."; exit 1; }
+
+      # Suppression du cluster existant pour un départ propre
       k3d cluster delete ${self.triggers.name} || true
 
-      # COMMANDE K3D CORRIGÉE (sur une seule ligne)
-      k3d cluster create ${self.triggers.name} --servers 3 --image rancher/k3s:v1.31.5-k3s1 -p 8081:30080@server:0 -p 8082:30081@server:0 --wait
+      # Création du cluster K3d avec 3 serveurs pour la résilience.
+      k3d cluster create ${self.triggers.name} \
+      --servers 3 \
+      --image rancher/k3s:v1.31.5-k3s1 \
+      -p 8081:30080@server:0 \
+      -p 8082:30081@server:0 \
+      --wait
 
-      # COMMANDE HELM CORRIGÉE (sur une seule ligne)
-      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --repo https://kubernetes.github.io/dashboard/ --namespace kubernetes-dashboard --create-namespace --set protocolHttp=true --set service.type=NodePort --set service.nodePort=30081 --wait
+      # Installation du Dashboard Kubernetes via Helm.
+      helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+      --repo https://kubernetes.github.io/dashboard/ \
+      --namespace kubernetes-dashboard \
+      --create-namespace \
+      --set protocolHttp=true \
+      --set service.type=NodePort \
+      --set service.nodePort=30081 \
+      --wait
     EOT
   }
 
@@ -27,7 +45,7 @@ resource "null_resource" "k3s_cluster" {
   }
 }
 
-# Récupération du Kubeconfig (nécessaire pour le provider Kubernetes)
+# Reste du fichier (inchangé)
 resource "null_resource" "kubeconfig_retrieve" {
   depends_on = [null_resource.k3s_cluster]
   provisioner "local-exec" {
@@ -89,7 +107,7 @@ resource "kubernetes_service" "app_service" {
     port {
       port        = 80
       target_port = "5000"
-      node_port   = 30080 # Le port externe (NodePort) est 30080 (mappé à 8081 sur l'hôte)
+      node_port   = 30080 # Le port externe (NodePort) doit être 30080
       protocol    = "TCP"
     }
   }
