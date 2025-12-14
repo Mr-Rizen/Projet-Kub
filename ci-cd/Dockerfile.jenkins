@@ -35,6 +35,6 @@ RUN groupadd -g 999 docker || true
 RUN usermod -aG docker jenkins
 
 # 7. Mettre à jour PATH pour tous les utilisateurs si nécessaire
-ENV PATH="/usr/local/bin:$PATH"
+#ENV PATH="/usr/local/bin:$PATH"
 
-USER jenkins
+#USER jenkins
