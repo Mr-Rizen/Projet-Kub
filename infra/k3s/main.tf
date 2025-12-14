@@ -56,9 +56,10 @@ resource "null_resource" "k8s_app_deployment" {
   }
   
   provisioner "local-exec" {
-    # --- CORRECTION APPLIQUÉE ICI ---
-    # L'apostrophe ('') n'a plus besoin d'être échappée (\) car elle est encapsulée dans des guillemets doubles.
-    command = "echo 'Simuler le déploiement de l'image ${self.triggers.image_tag} sur le cluster ${null_resource.k3s_cluster.triggers.name}'"
+    # CORRECTION de l'échappement : 
+    # Le \ avant l'apostrophe dans "l'image" empêche le shell d'interpréter cette apostrophe
+    # comme la fin prématurée de la chaîne ('Simuler le déploiement de l').
+    command = "echo 'Simuler le déploiement de l\\'image ${self.triggers.image_tag} sur le cluster ${null_resource.k3s_cluster.triggers.name}'"
     interpreter = ["/bin/bash", "-c"]
   }
 }
