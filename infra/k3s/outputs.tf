@@ -10,7 +10,7 @@ output "application_url" {
   description = "URL pour accéder à l'application Flask."
   # Application sur Hôte:8081 -> K8s:30080
   value = "http://localhost:8081"
-  depends_on = [kubernetes_service.app_service]
+  # depends_on = [kubernetes_service.app_service]
 }
 
 output "dashboard_url" {
