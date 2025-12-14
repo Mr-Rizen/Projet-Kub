@@ -1,4 +1,25 @@
-# deployment.yaml (À titre informatif)
-# apiVersion: apps/v1
-# kind: Deployment
-# ...
+# Projet-Kub/app/kubernetes/deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-webapp-deployment
+  labels:
+    app: devops-webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-webapp
+  template:
+    metadata:
+      labels:
+        app: devops-webapp
+    spec:
+      containers:
+      - name: devops-webapp
+        # IMPORTANT : L'image sera remplacée par Terraform/kubectl lors du déploiement
+        image: kikih/devops-webapp:LATEST_TAG
+        ports:
+        - containerPort: 5000 
+          name: http-app

@@ -1,15 +1,15 @@
+# Projet-Kub/app/kubernetes/service.yaml
+
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-loadbalancer-service
-  labels:
-    App: flask-web
+  name: devops-webapp-service
 spec:
-  # Doit correspondre au Label utilisé dans le Déploiement
   selector:
-    App: flask-web 
-  type: LoadBalancer # Permet à K3s d'exposer ce service
+    app: devops-webapp # Assurez-vous que cela correspond aux labels du Deployment
+  type: NodePort
   ports:
     - protocol: TCP
-      port: 80         # Le port que le service écoute
-      targetPort: 5000 # Le port de l'application Flask dans le Pod
+      port: 80         # Port standard du service (port interne du Service)
+      targetPort: 5000 # Port écouté par votre application Flask dans le conteneur
+      nodePort: 30080  # <-- Port exposé sur le(s) nœud(s) K3s (redirigé vers le port 8081 de votre hôte)
