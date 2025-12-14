@@ -1,45 +1,31 @@
 #!/bin/bash
 # create_k3s_cluster.sh
-
-# Arrête le script immédiatement si une commande échoue
 set -e
 
-# Vérification des dépendances (k3d et helm doivent être installés sur le runner Jenkins)
-command -v k3d || { echo "Erreur: k3d non trouvé."; exit 1; }
-command -v helm || { echo "Erreur: helm non trouvé."; exit 1; }
-command -v kubectl || { echo "Erreur: kubectl non trouvé."; exit 1; }
+# --- Vérification des dépendances ---
+command -v k3d >/dev/null || { echo "❌ k3d introuvable"; exit 1; }
+command -v helm >/dev/null || { echo "❌ helm introuvable"; exit 1; }
+command -v kubectl >/dev/null || { echo "❌ kubectl introuvable"; exit 1; }
 
-# Nom du cluster
 CLUSTER_NAME="k3d-dev-cluster"
+DASHBOARD_PORT=8082
 
-echo "--- 1. Nettoyage du cluster précédent (si existant) : $CLUSTER_NAME ---"
-# Suppression du cluster existant pour un départ propre
-k3d cluster delete "$CLUSTER_NAME" || true
+echo "--- 1. Nettoyage et Création du Cluster (Simple) ---"
+k3d cluster delete "$CLUSTER_NAME" 2>/dev/null || true
+# Création simple SANS mapping de port (-p)
+k3d cluster create "$CLUSTER_NAME" --servers 1 --wait
 
-echo "--- 2. Création du cluster K3d : $CLUSTER_NAME ---"
-# Création du cluster K3d avec 1 serveur et exposition du port 8082:30082
-k3d cluster create "$CLUSTER_NAME" \
-  --servers 1 \
-  --image rancher/k3s:v1.31.5-k3s1 \
-  -p 8082:30082@server:0 \
-  --wait
-
-echo "--- 3. Ajout/Mise à jour du dépôt Helm pour le Dashboard ---"
-helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
-helm repo update
-
-echo "--- 4. Installation du Dashboard Kubernetes via Helm ---"
-# Installation du Dashboard en utilisant le NodePort 30082
+echo "--- 2. Installation Dashboard (Helm) ---"
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update >/dev/null
+helm repo update >/dev/null
+# Installation standard en HTTP
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
   --namespace kubernetes-dashboard \
   --create-namespace \
   --set protocolHttp=true \
-  --set service.type=NodePort \
-  --set service.nodePort=30082 \
   --wait
 
-echo "--- 5. Configuration de l'accès au Dashboard (Token Admin) ---"
-# Création d'un ServiceAccount et d'un ClusterRoleBinding pour l'accès complet
+echo "--- 3. Création Admin User ---"
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ServiceAccount
@@ -61,23 +47,25 @@ subjects:
   namespace: kubernetes-dashboard
 EOF
 
-# Afficher les informations de connexion
-echo "✅ Provisionnement K3s + Dashboard terminé avec succès."
+echo "--- 4. EXPOSITION DU DASHBOARD (Port-Forward) ---"
+# Utilisation du service principal du dashboard pour le port-forward
+SVC_NAME="service/kubernetes-dashboard"
+
+echo "Lancement du port-forward en arrière-plan sur 0.0.0.0:$DASHBOARD_PORT..."
+
+# On tue les anciens processus de port-forward (important pour le nettoyage)
+pkill -f "kubectl port-forward" || true
+
+# Redirection CRUCIALE : 8082 du conteneur Jenkins vers le port 80 du service Dashboard
+# --address 0.0.0.0 permet de rendre le trafic accessible par l'hôte Docker (votre PC)
+kubectl port-forward -n kubernetes-dashboard $SVC_NAME $DASHBOARD_PORT:80 --address 0.0.0.0 > /dev/null 2>&1 &
+echo $! > /tmp/dashboard_portforward_pid
+
+echo "✅ Cluster prêt. Récupération du Token..."
 echo "--------------------------------------------------------"
-echo "URL du Dashboard : http://localhost:8082/"
+echo "URL Dashboard : http://localhost:8082"
 echo "Token pour se connecter :"
-
-# Attendre que le ServiceAccount soit prêt pour générer le token
-# Ceci aide à éviter l'erreur "serviceaccount/admin-user not found"
+# On attend un peu que le service account soit finalisé
 sleep 5
-
-# Récupérer le token (cette commande DOIT réussir si le SA a été créé)
-kubectl -n kubernetes-dashboard create token admin-user
-
+kubectl -n kubernetes-dashboard create token admin-user --duration=24h
 echo "--------------------------------------------------------"
-
-# Petit délai pour laisser le temps aux services internes de démarrer
-sleep 10
-
-echo "Vérification finale de l'état des Pods du Dashboard:"
-kubectl get pods -n kubernetes-dashboard
